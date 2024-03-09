@@ -1,0 +1,21 @@
+use [OUTSYSTEMS]
+select U.Name AS 'User Full Name',
+	   U.Username,
+	   u.ID, 
+	   u.EMAIL as 'User Email', 
+	   U.creation_date as 'Creation Date', 
+	   U.LAST_LOGIN as 'Last Login', 
+	   U.Is_Active, 
+	   T.NAME AS 'Tenant Name',
+	   T.ID AS 'Tenant ID'
+from ossys_user u
+LEFT JOIN OSSYS_TENANT t ON U.TENANT_ID = t.ID
+WHERE U.LAST_LOGIN < getdate() - 30 AND U.EMAIL LIKE '%deloitte%'
+AND U.IS_ACTIVE = 1
+AND u.CREATION_DATE < getdate() -30
+and t.id <> '1'
+order by U.LAST_LOGIN, U.Username
+
+
+	   R.NAME as "ASSIGNED ROLE", #TODO: FIX THIS LINE
+	   A.NAME as "APP NAME" #TODO: FIX THIS LINE

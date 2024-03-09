@@ -1,0 +1,57 @@
+function filterusers {
+    param (
+        [string]$users
+    )
+    $list = "test", "service", "pentest", "deployment"
+
+    $pattern = ($list | ForEach-Object { [regex]::Escape($_) }) -join '|'
+    $filteredUsers = $users | Where-Object { $_ -notmatch $pattern }
+
+    if ($filteredUsers.Count -gt 0) {
+        $filteredUsers | ForEach-Object {
+            $_ | Out-File './OSUAT_NEVER_SIGNED_IN.csv' -Append }
+    }
+}
+
+try {
+    Start-Transcript -Path ./scriptlog.txt
+    #$Date = (Get-Date).AddDays(-30)
+      
+    $Outsystemusers = Import-Csv './OutSystemsUsersUAT.csv'
+
+    $usernames = $Outsystemusers | Where-Object {
+        "$_.last login" -eq "01/01/1900  00:00:00" -and
+        "$_.User Email" -like "deloitte"
+        
+        filterusers -users $usernames
+        Stop-Transcript
+    }
+}
+catch {
+    $error | out-file ./errors.txt
+}
+
+<#
+We need to exclude tenant ID 1
+
+Need to filter GATE1 csv by, root, admin, system, test
+
+
+ADD FILTER
+
+Never logged into Outsystems
+Username: @DELOITTE
+Last Login: 01/01/1900  00:00:00
+These accounts should be disabled
+
+Internal Deloitte Admins
+Username: @DELOITTE OR EMAIL ADDRESS
+Roles: Admin (check with Andrew)
+
+
+QUESTIONS
+
+What do we want to do with the test accounts? examples: pentest, external test, deloitte test reviewer, deloitte test editor, commercial reviewer test
+
+
+#>

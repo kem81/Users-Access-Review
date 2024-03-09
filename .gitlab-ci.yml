@@ -1,0 +1,117 @@
+#Uses the Microsoft PowerShell container image from the official MS container registry
+default:
+  image: mcr.microsoft.com/powershell:latest
+
+#Defines the stages in the pipeline.
+stages:
+  - Export-Users
+  - Filter-Users-job
+  - DisableUsersList
+  - DisableUsers
+
+#This stage exports all the users from AWS to a csv file
+Exporting-Users-job:
+  script:
+    - pwsh ./ExportUsers/Get-AllAWSUsers.ps1
+    - pwsh ./ExportUsers/Get-Gitlabusers.ps1
+    - pwsh ./ExportUsers/Get-OutSystemsUsers.ps1
+  stage: Export-Users
+  artifacts:
+    paths:
+      - ./CredentialsReport.csv
+      - ./AWSUserScriptLog.txt
+      - ./AllAWSUsers.csv
+      - ./GitlabUsers.csv
+      - ./OutSystemsUsers.csv
+      - ./errors.txt
+
+#This stage filters users for all the platforms
+Filter-Users-job:
+  script:
+    - pwsh ./FilterUsers/FilterAWSConsoleAccess.ps1
+    - pwsh ./FilterUsers/FilterAccessKey1.ps1
+    - pwsh ./FilterUsers/FilterAccessKey2.ps1
+    - pwsh ./FilterUsers/FilterAccessKey1B.ps1
+    - pwsh ./FilterUsers/FilterAccessKey2B.ps1
+    - pwsh ./FilterUsers/FilterGitLabUsers.ps1
+  stage: Filter-Users-job
+  needs:
+    - job: "Exporting-Users-job"
+      artifacts: true
+  artifacts:
+    paths:
+      - ./UsersConsoleAccess.csv
+      - ./UsersAccessKey1.csv
+      - ./UsersAccessKey2.csv
+      - ./UsersAccessKey1B.csv
+      - ./UsersAccessKey2B.csv
+      - ./FilteredGitlabUsers.csv
+      - ./AWSConsoleAccessLogs.txt
+      - ./Function_Errors.txt
+      - ./functionscripterrors.txt
+
+#This job collects all the users from AWS for review
+GetAllUsers-Job:
+  script:
+    - pwsh ./DisableUsers/AWSUsersList.ps1
+  stage: DisableUsersList
+  needs:
+    - job: "Filter-Users-job"
+      artifacts: true
+    - job: "Exporting-Users-job"
+      artifacts: true
+  artifacts:
+    paths:
+      - ./AWSUsersToBeDisabled.csv
+      - ./FilteredGitlabUsers.csv
+      - ./ScriptLog.txt
+      - ./errors.txt
+
+#Disables AWS Users
+DisableAWS-Users-Job:
+  script: pwsh ./DisableUsers/DisableAWSUsers.ps1
+  stage: DisableUsers
+  needs:
+    - job: "GetAllUsers-Job"
+      artifacts: true
+  when: manual
+  artifacts:
+    paths:
+      - ./scriptlog.txt
+      - ./errors.txt
+
+#This job collects all Gitlab users for review
+Gitlab-Users-To-Be-Disabled-Job:
+  script: pwsh ./DisableUsers/GitlabUsersToBeDisabled.ps1
+  stage: DisableUsers
+  needs:
+    - job: "GetAllUsers-Job"
+      artifacts: true
+  artifacts:
+    paths:
+      - ./GitlabUsersToBeDisabled.csv
+
+#Disables Gitlab users
+DisableGitlab-Users-Job:
+  script: pwsh ./DisableUsers/DisableGitlabUsers.ps1
+  stage: DisableUsers
+  needs:
+    - job: "GetAllUsers-Job"
+      artifacts: false
+  artifacts:
+    paths:
+      - ./scriptlog.txt
+      - ./errors.txt
+
+#Disables OutSystems Users
+DisableOS-Users-Job:
+  script: pwsh ./DisableUsers/DisableOutSystemsUsers.ps1
+  stage: DisableUsers
+  needs:
+    - job: "GetAllUsers-Job"
+      artifacts: true
+  when: manual
+  artifacts:
+    paths:
+      - ./scriptlog.txt
+      - ./errors.txt

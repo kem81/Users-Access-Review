@@ -1,0 +1,28 @@
+use [OUTSYSTEMS]
+select
+    u.name as "User Full Name",
+    u.username as "Username",
+    u.EMAIL as "User Email",
+    u.ID,
+    t.name as "Tenant Name",
+    a.name as "App Name",
+    r.name as "Assigned Role",
+    u.IS_ACTIVE
+from[dbo].[ossys_user] u
+	left join [dbo].ossys_Tenant t
+	on u.TENANT_ID = t.id
+	left join [dbo].[ossys_user_role] ur
+	on u.ID  =ur.USER_ID
+	left join [dbo].ossys_role r
+	on ur.Role_Id = r.ID
+	left join  [dbo].[ossys_Espace] e
+	on r.ESPACE_ID  = e.id
+	left join [dbo].[OSSYS_MODULE] m
+	on e.ID = m.ESPACE_ID
+	left join [dbo].[OSSYS_APP_DEFINITION_MODULE] am
+	on m.id = am.module_ID
+	left join [dbo].[OSSYS_APPLICATION] a
+	on am.APPLICATION_ID = a.ID
+Where U.IS_ACTIVE = 1
+and t.id <> '1'
+order by U.NAME

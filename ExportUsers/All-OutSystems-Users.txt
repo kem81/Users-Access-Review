@@ -1,0 +1,50 @@
+USE [OUTSYSTEMS];
+
+SELECT 
+    U.Name AS 'User Full Name',
+    U.Username,
+    U.ID,
+    U.EMAIL AS 'User Email',
+    U.creation_date AS 'Creation Date',
+    U.LAST_LOGIN AS 'Last Login',
+    U.Is_Active,
+    T.NAME AS 'Tenant Name',
+    T.ID AS 'Tenant ID',
+    NULL AS 'App Name',
+    NULL AS 'Assigned Role'
+FROM 
+    ossys_user U
+    LEFT JOIN OSSYS_TENANT T ON U.TENANT_ID = T.ID
+WHERE 
+    U.LAST_LOGIN < GETDATE() - 30
+    AND U.EMAIL LIKE '%deloitte%'
+    AND U.IS_ACTIVE = 1
+    AND U.CREATION_DATE < GETDATE() - 30
+    AND T.ID <> '1'
+UNION
+SELECT
+    U.Name AS 'User Full Name',
+    U.Username,
+    U.ID,
+    U.EMAIL AS 'User Email',
+    NULL AS 'Creation Date',
+    NULL AS 'Last Login',
+    U.IS_ACTIVE,
+    T.NAME AS 'Tenant Name',
+    NULL AS 'Tenant ID',
+    A.name AS 'App Name',
+    R.name AS 'Assigned Role'
+FROM
+    dbo.ossys_user U
+    LEFT JOIN dbo T ON U.TENANT_ID = T.id
+    LEFT JOIN dbouser_role UR ON U.ID = UR.USER_ID
+    LEFT JOIN dbossys_role R ON UR.Role_Id = R.ID
+    LEFT JOIN dbossys_Espace E ON R.ESPACE_ID = E.id
+    LEFT JOIN dbomodule M ON E.ID = M.ESPACE_ID
+    LEFT JOIN dbo.OSSYS_APP_DEFINITION_MODULE AM ON M.id = AM.module_ID
+    LEFT JOIN dboOSSYS_APP A ON AM.APPLICATION_ID = A.ID
+WHERE
+    U.IS_ACTIVE = 1
+    AND T.ID <> '1'
+ORDER BY 
+    'User Full Name', Username;
